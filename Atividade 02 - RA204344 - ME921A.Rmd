@@ -85,7 +85,7 @@ plot(modelo2, what = "classification")
 uncerPlot(modelo2$z)
 
 #Considerando 3 clusteres
-modelo3 <- Mclust(dados2, 3, prior = priorControl(modelNames = "EEE", scale = cov(dados)))
+modelo3 <- Mclust(dados2, 3, prior = priorControl(modelNames = "EEE", scale = cov(dados2)))
 plot(modelo3, what = "classification")
 uncerPlot(modelo3$z)
 
