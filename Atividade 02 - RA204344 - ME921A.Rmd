@@ -1,0 +1,114 @@
+## ATIVIDADE 02 - ME921A
+Mariana Peres Nascimento - RA204344
+
+Carregando os pacotes necessários:
+```{r}
+library(tidyverse)
+library(GGally)
+library(mclust)
+library(magrittr)
+library(covRobust)
+library(geobr)
+```
+
+
+Importando os dados e fazendo as transformações necessárias:
+```{r}
+dados <- read_csv("C:/Users/maris/Downloads/Atividade 02 - ME921A - Dados.csv")
+
+uf <- dados$UF
+dados %<>% select(-UF)
+ggpairs(dados) + theme_bw()
+
+
+dados$Perseguição <- log(dados$Perseguição)
+dados$`Importunação sexual` <- log(dados$`Importunação sexual`)
+dados$Estupros <- log(dados$Estupros)
+
+ggpairs(dados) + theme_bw()
+```
+
+Modelo 1: vizinhos mais próximos (nearest neighbors)
+```{r}
+dados1 <- dados
+
+nnve.out1 <- cov.nnve(dados1)
+
+nnve.out1$classification
+
+plot(mclustBIC(dados1, initialization = list(noise = (nnve.out1$classification == 0))), xlab = "Número de clusteres")
+
+modelo <- Mclust(dados1, 2, modelNames = "EVE", initialization = list(noise = (nnve.out1$classification == 0)))
+
+plot(modelo, what = "classification")
+plot(modelo, what = "uncertainty")
+uncerPlot(modelo$z)
+
+dados1$UF <- uf
+
+subset(dados1, modelo$classification == 0)
+subset(dados1, modelo$classification == 1)
+subset(dados1, modelo$classification == 2)
+
+dados1$cluster <- as.factor(modelo$classification)
+
+brasil <- read_state(year = 2020)
+
+brasil <- left_join(brasil, dados1, by = c("abbrev_state" = "UF"))
+
+brasil %>% ggplot() +
+  geom_sf(aes(fill = cluster)) +
+  geom_sf_text(aes(label = abbrev_state), size = 2) +
+  labs(fill = "Cluster", x = "", y = "") +
+  theme_bw()
+
+dados1 %>% group_by(cluster) %>% summarise(Feminicídios = mean(Feminicídios),
+                                           Ameaça = mean(Ameaça),
+                                           Perseguição = mean(Perseguição),
+                                           Estupros = mean(Estupros),
+                                           `Importunação sexual` = mean(`Importunação sexual`))
+dados1 %>% group_by(cluster) %>% summarise(Feminicídios = sd(Feminicídios),
+                                           Ameaça = sd(Ameaça),
+                                           Perseguição = sd(Perseguição),
+                                           Estupros = sd(Estupros),
+                                           `Importunação sexual` = sd(`Importunação sexual`))
+```
+
+Modelos 2 e 3: modificando prioris
+```{r}
+#Considerando 2 clusteres
+dados2 <- dados
+
+mclustBIC(dados2, prior = priorControl(scale=cov(dados2)))
+modelo2 <- Mclust(dados2, 2, prior = priorControl(modelNames = "VEV", scale = cov(dados2)))
+plot(modelo2, what = "classification")
+uncerPlot(modelo2$z)
+
+#Considerando 3 clusteres
+modelo3 <- Mclust(dados2, 3, prior = priorControl(modelNames = "EEE", scale = cov(dados)))
+plot(modelo3, what = "classification")
+uncerPlot(modelo3$z)
+
+dados2$cluster2 <- as.factor(modelo2$classification)
+dados2$cluster3 <- as.factor(modelo3$classification)
+dados2$UF <- uf
+
+#Gráficos
+brasil2 <- read_state(year = 2020)
+
+brasil2 <- left_join(brasil2, dados2, by = c("abbrev_state" = "UF"))
+
+brasil2 %>% ggplot() +
+  geom_sf(aes(fill = cluster2)) +
+  geom_sf_text(aes(label = abbrev_state), size = 2) +
+  labs(fill = "Cluster", x = "", y = "") +
+  theme_bw()
+
+brasil2 %>% ggplot() +
+  geom_sf(aes(fill = cluster3)) +
+  geom_sf_text(aes(label = abbrev_state), size = 2) +
+  labs(fill = "Cluster", x = "", y = "") +
+  theme_bw()
+```
+
+
