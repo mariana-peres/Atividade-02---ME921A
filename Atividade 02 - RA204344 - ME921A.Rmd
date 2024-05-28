@@ -36,7 +36,7 @@ nnve.out1 <- cov.nnve(dados1)
 
 nnve.out1$classification
 
-plot(mclustBIC(dados1, initialization = list(noise = (nnve.out1$classification == 0))), xlab = "Número de clusteres")
+mclustBIC(dados1, initialization = list(noise = (nnve.out1$classification == 0)))
 
 modelo <- Mclust(dados1, 2, modelNames = "EVE", initialization = list(noise = (nnve.out1$classification == 0)))
 
